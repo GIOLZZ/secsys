@@ -1,0 +1,103 @@
+
+# ==================== 日志配置 ====================
+version: 1
+disable_existing_loggers: false
+
+# 日志格式定义
+formatters:
+  detailed:
+    format: '%(asctime)s - %(name)s - %(levelname)s - %(processName)s[%(process)d] - %(message)s'
+    datefmt: '%Y-%m-%d %H:%M:%S'
+  
+  simple:
+    format: '%(asctime)s - %(levelname)s - %(message)s'
+    datefmt: '%H:%M:%S'
+
+# 日志处理器
+handlers:
+  # 控制台输出
+  console:
+    class: logging.StreamHandler
+    level: DEBUG
+    formatter: simple
+    stream: ext://sys.stdout
+  
+  # 采集服务日志文件（按天轮转）
+  capture_service_file:
+    class: logging.handlers.TimedRotatingFileHandler
+    level: INFO
+    formatter: detailed
+    filename: logs/capture_service.log
+    when: 'midnight'
+    interval: 1
+    backupCount: 7  # 保留7天
+    encoding: utf-8
+  
+  # 采集工作进程日志（每个流独立文件）
+  capture_worker_file:
+    class: logging.handlers.TimedRotatingFileHandler
+    level: INFO
+    formatter: detailed
+    filename: logs/capture_worker.log
+    when: 'midnight'
+    interval: 1
+    backupCount: 3
+    encoding: utf-8
+  
+  # 帧发布器日志
+  publisher_file:
+    class: logging.handlers.RotatingFileHandler
+    level: WARNING
+    formatter: detailed
+    filename: logs/frame_publisher.log
+    maxBytes: 10485760  # 10MB
+    backupCount: 5
+    encoding: utf-8
+  
+  # 分析层日志
+  analyzer_file:
+    class: logging.handlers.TimedRotatingFileHandler
+    level: DEBUG
+    formatter: detailed
+    filename: logs/analyzer.log
+    when: 'midnight'
+    interval: 1
+    backupCount: 7
+    encoding: utf-8
+
+# 日志记录器配置
+loggers:
+  # 采集服务主模块
+  capture_service:
+    level: INFO
+    handlers: [console, capture_service_file]
+    propagate: false
+  
+  # 采集工作进程
+  capture_worker:
+    level: INFO
+    handlers: [capture_worker_file]
+    propagate: false
+  
+  # 帧发布器
+  frame_publisher:
+    level: WARNING
+    handlers: [publisher_file]
+    propagate: false
+  
+  # Redis客户端日志
+  redis.client:
+    level: WARNING
+    handlers: [console]
+    propagate: false
+  
+  # 分析层
+  frame_consumer:
+    level: DEBUG
+    handlers: [console, analyzer_file]
+    propagate: false
+
+# 根日志记录器
+root:
+  level: INFO
+  handlers: [console]

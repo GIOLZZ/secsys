@@ -1,0 +1,18 @@
+# Ultralytics YOLO 🚀, AGPL-3.0 license
+# Default YOLO tracker settings for BoT-SORT tracker https://github.com/NirAharon/BoT-SORT
+
+tracker_type: botsort # tracker type, ['botsort', 'bytetrack']
+track_high_thresh: 0.5 # threshold for the first association
+track_low_thresh: 0.1 # threshold for the second association
+new_track_thresh: 0.8 # threshold for init new track if the detection does not match any tracks
+track_buffer: 500 # buffer to calculate the time when to remove tracks
+match_thresh: 0.8 # threshold for matching tracks
+# min_box_area: 10  # threshold for min box areas(for tracker evaluation, not used for now)
+# mot20: False  # for tracker evaluation(not used for now)
+
+# BoT-SORT settings
+gmc_method: sparseOptFlow # method of global motion compensation 全局运动补偿的方法，此处使用稀疏光流法。
+# ReID model related thresh (not supported yet)
+proximity_thresh: 0.5 # 判断两个目标空间接近程度的阈值。
+appearance_thresh: 0.25 # 判断两个目标外观相似程度的阈值。
+with_reid: False

@@ -1,0 +1,37 @@
+streams:
+  # - stream_id: "entrance_cam"
+  #   protocol: "rtsp"
+  #   url: "rtsp://admin:password@192.168.1.101:554/h264/ch1/main/av_stream"
+  #   fps: 25
+  #   enable: true
+    
+  # - stream_id: "warehouse_cam"
+  #   protocol: "gb28181"
+  #   device_id: "34020000001180000001"
+  #   local_sip_port: 5060
+  #   server_ip: "192.168.1.200"
+  #   fps: 20
+  #   enable: true
+    
+  # - stream_id: "usb_cam"
+  #   protocol: "usb"
+  #   device_id: 0
+  #   fps: 30
+  #   enable: false
+  
+  - stream_id: "video_file"
+    protocol: "file"
+    file_path: "data/test_video/37b9517f5945f7792ea9d068fcbd4979.mp4"
+    fps: 25
+    enable: true
+
+redis:
+  host: "localhost"
+  port: 6379
+  password: ""
+  db: 0
+  stream_maxlen: 100  # 每路流最大缓存帧数
+  
+system:
+  log_level: "INFO"
+  capture_restart_interval: 30  # 采集异常重启间隔(秒)

@@ -1,0 +1,11 @@
+# Ultralytics YOLO 🚀, AGPL-3.0 license
+# Default YOLO tracker settings for ByteTrack tracker https://github.com/ifzhang/ByteTrack
+
+tracker_type: bytetrack # tracker type, ['botsort', 'bytetrack']
+track_high_thresh: 0.5 # threshold for the first association 第一次关联的高阈值，用于确定有效追踪目标。
+track_low_thresh: 0.1 # threshold for the second association 第二次关联的低阈值，即使置信度较低也可能视为有效目标。
+new_track_thresh: 0.8 # threshold for init new track if the detection does not match any tracks 初始化新追踪的阈值，用于不匹配任何现有轨迹的检测对象。
+track_buffer: 500 # buffer to calculate the time when to remove tracks 追踪缓冲时间长度，单位通常是帧数。
+match_thresh: 0.8 # threshold for matching tracks 匹配轨迹的阈值，用于确定两个轨迹是否为同一目标。
+# min_box_area: 10  # threshold for min box areas(for tracker evaluation, not used for now) 最小框面积阈值（用于追踪器评估）。
+# mot20: False  # for tracker evaluation(not used for now) 用于追踪器评估。
