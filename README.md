@@ -1,2 +1,10 @@
-# secsys
-一个智能分析系统，你可以在此系统上扩展核心业务（安防、交通等），实现目标事件上报。该系统支持GB28181/RTSP/ONVIF协议推流，核心算法（Resnet、Yolov8、PaddleOCR等）多平台（Torch、RKNN、TensorRT、onnxRT、Ascend）适配，基于这些核心算法，系统开发了目标追踪模块、车牌识别模块、目标匹配模块等。该系统还向外提供API接口、数据库，供web/app端使用。
+# 简介
+FlexiVision一个智能分析系统，你可以在此系统上扩展核心业务（安防、交通等），实现你希望的事件上报。该系统支持GB28181/RTSP/ONVIF协议推流，核心算法（Resnet、Yolov8、PaddleOCR等）多平台（Torch、RKNN、TensorRT、onnxRT、Ascend）适配，基于这些核心算法，系统开发了目标追踪、车牌识别、目标匹配、人脸识别等模块。该系统还向外提供API接口、数据库，供web/app端对接。  
+  
+
+该系统由C++和Python混合开发，C++主要开发视频解码推流和模型推理，Python主要开发核心业务逻辑和各功能模块以及API接口。  
+  
+本项目的核心特点是可扩展核心业务、多模型多平台适配。  
+
+# 注意
+本系统开发中...
