@@ -1,9 +1,6 @@
 import math
-import time
 import numpy as np
 import cv2
-
-from algo.yolov8.results import YoloDetectResults
 
 
 def letterbox(im: np.ndarray, new_shape=(640, 640), color=(114, 114, 114), scaleFill=False, scaleup=False):
@@ -150,120 +147,9 @@ def extract_orig_box(box, pad, ratio, orig_shape):
 
     return orig_box
 
-def postprocess_det(outputs: np.ndarray, orig_shape, conf_thres=0.25, iou_thres=0.45, ratio=1.0, pad=(0, 0)) -> YoloDetectResults:
-    """
-    YOLOv8Det输出后处理
-    
-    Args:
-        outputs: 推理输出
-        orig_shape: 原始图像形状 (height, width)
-        conf_thres: 置信度阈值
-        iou_thres: NMS IoU阈值
-        ratio: 预处理缩放比例
-        pad: 填充尺寸 (dw, dh)
-
-    Returns:
-        YoloDetectResults: 结果
-    """
-    outputs = outputs[0]
-    predictions = np.squeeze(outputs).T
-    
-    boxes = predictions[:, :4]  # 边界框
-    scores = predictions[:, 4:]  # 类别置信度
-    
-    # 计算每个框的最大置信度和对应类别
-    confidences = np.max(scores, axis=1)
-    class_ids = np.argmax(scores, axis=1)
-    
-    # 置信度过滤
-    mask = confidences >= conf_thres
-    boxes = boxes[mask]
-    confidences = confidences[mask]
-    class_ids = class_ids[mask]
-    
-    if len(boxes) == 0:
-        return YoloDetectResults()
-    
-    boxes_xyxy = xywh2xyxy(boxes)
-    
-    # NMS
-    indices = nms(boxes_xyxy, confidences, iou_thres)
-    
-    # 获取结果
-    orig_boxes = []
-    for i in indices:
-        orig_box = extract_orig_box(boxes_xyxy[i], pad, ratio, orig_shape)
-        orig_boxes.append(orig_box)
-
-    detect_results = YoloDetectResults()
-    detect_results.boxes = orig_boxes
-    detect_results.clss = class_ids[indices].tolist()
-    detect_results.confs = confidences[indices].tolist()
-    
-    return detect_results
-
-def postprocess_seg(outputs: np.ndarray, orig_shape, conf_thres=0.25, iou_thres=0.45, ratio=1.0, pad=(0, 0)) -> YoloDetectResults:
-    """
-    YOLOv8Seg输出后处理
-    
-    Args:
-        outputs: 推理输出
-        orig_shape: 原始图像形状 (height, width)
-        conf_thres: 置信度阈值
-        iou_thres: NMS IoU阈值
-        ratio: 预处理缩放比例
-        pad: 填充尺寸 (dw, dh)
-
-    Returns:
-        YoloDetectResults: 结果
-    """
-    outputs0 = outputs[0]
-    outputs1 = outputs[1]
-
-    proto = outputs1[0] # 原型掩码，用于生成分割掩码
-    nm = proto.shape[0] # 掩码系数数量
-    nc = outputs0.shape[1] - 4 - 1 - nm # 类别数量
-    
-    predictions = np.squeeze(outputs0).T
-
-    # conf过滤
-    scores = np.max(predictions[:, 4:5+nc], axis=1)
-    predictions = predictions[scores > conf_thres, :]
-    confidences = scores[scores > conf_thres]
-
-    if len(confidences) == 0:
-        return YoloDetectResults()
-
-    mask_predictions = predictions[..., nc+5:]
-    box_predictions = predictions[..., :nc+5]
-    boxes = box_predictions[:, :4]
-    class_ids = np.argmax(box_predictions[:, 4:], axis=1)
-
-    # 2xyxy
-    boxes_xyxy = xywh2xyxy(boxes)
-
-    # NMS
-    indices = nms(boxes_xyxy, confidences, iou_thres)
-
-    orig_boxes = []
-    for i in indices:
-        orig_box = extract_orig_box(boxes_xyxy[i], pad, ratio, orig_shape)
-        orig_boxes.append(orig_box)
-
-    detect_results = YoloDetectResults()
-    detect_results.boxes = orig_boxes
-    detect_results.clss = class_ids[indices].tolist()
-    detect_results.confs = confidences[indices].tolist()
-
-    mask_pred = mask_predictions[indices]
-
-    # 处理速度待优化
-    detect_results.masks = process_mask_output(mask_pred, outputs1, np.array(detect_results.boxes), orig_shape, (640, 640), ratio, pad)
-
-    return detect_results
-
 def process_mask_output(mask_predictions, mask_output, boxes, orig_shape, input_shape, ratio, pad):
     """
+    处理Yolov8-seg mask输出
     Args:
         mask_predictions:
         mask_output: 模型mask输出
@@ -330,4 +216,132 @@ def process_mask_output(mask_predictions, mask_output, boxes, orig_shape, input_
 def sigmoid(x):
     return 1 / (1 + np.exp(-x))
 
+def obb_to_polygon(box):
+    """[cx, cy, w, h, angle] to 4x2 polygon"""
+    cx, cy, w, h, angle = box
+    rect = ((cx, cy), (w, h), angle)
+    points = cv2.boxPoints(rect)  # 4x2
+    return points
 
+def polygon_iou(poly1, poly2):
+    """Compute IoU of two polygons using OpenCV"""
+    poly1 = poly1.astype(np.float32)
+    poly2 = poly2.astype(np.float32)
+
+    inter = cv2.intersectConvexConvex(poly1, poly2)
+
+    if inter[0] <= 0:
+        return 0.0
+
+    inter_area = inter[0]
+    area1 = cv2.contourArea(poly1)
+    area2 = cv2.contourArea(poly2)
+    union_area = area1 + area2 - inter_area
+    return inter_area / union_area
+
+def compute_iou_obb(box, boxes):
+    """计算OBB的IOU"""
+    poly1 = obb_to_polygon(box)
+    ious = np.zeros(len(boxes), dtype=np.float32)
+
+    for i, b in enumerate(boxes):
+        poly2 = obb_to_polygon(b)
+        ious[i] = polygon_iou(poly1, poly2)
+
+    return ious
+
+def nms_obb(boxes, scores, iou_threshold):
+    """
+    NMS OBB
+    Args:
+        boxes (numpy.ndarray): 框坐标
+        scores (numpy.ndarray): 框得分
+        iou_threshold (float): iou阈值
+
+    Returns:
+        keep_boxes (numpy.ndarray): 保留的框索引
+    """
+    order = scores.argsort()[::-1]  # descending
+    keep = []
+
+    while len(order) > 0:
+        i = order[0]
+        keep.append(i)
+
+        if len(order) == 1:
+            break
+
+        ious = compute_iou_obb(boxes[i], boxes[order[1:]])
+
+        remain = np.where(ious < iou_threshold)[0]
+        order = order[remain + 1]
+
+    return keep
+
+def get_obb_box(rboxes, ratio, pad, original_size):
+    """
+    将 YOLOv8 旋转框从 letterbox 坐标恢复到原图坐标
+
+    Args:
+        rboxes: (N, 5) 预测框 (x, y, w, h, angleDeg)
+        ratio: letterbox 的缩放比例 r
+        pad: letterbox 的 padding (dw, dh)
+        original_size: (H, W) 原图大小
+
+    Returns:
+        box_list: 每个框的 4 个角点 [[x1,y1], ...]
+    """
+    dw, dh = pad                # letterbox padding
+    H0, W0 = original_size      # 原图尺寸
+    box_list = []
+
+    for box in rboxes:
+        x, y, w, h, angle_deg = box
+        r = np.deg2rad(angle_deg)
+        corners = rotate_box(x, y, w, h, r)
+
+        corners[:, 0] -= dw
+        corners[:, 1] -= dh
+
+        corners /= ratio
+
+        # 限制边界
+        corners[:, 0] = np.clip(corners[:, 0], 0, W0 - 1)
+        corners[:, 1] = np.clip(corners[:, 1], 0, H0 - 1)
+
+        box_list.append(corners.astype(int).tolist())
+
+    return box_list
+
+def rotate_box(x, y, w, h, r):
+    """
+    计算旋转框的四个角点坐标。
+    Args:
+        x, y: 旋转框的中心坐标
+        w, h: 旋转框的宽度和高度
+        r: 旋转角度（弧度）
+    Returns:
+        四个角点的坐标，按照顺时针顺序排列
+    """
+    # 计算框的四个角点
+    cos_r = math.cos(r)
+    sin_r = math.sin(r)
+    
+    # 相对于框中心的四个角点坐标
+    corners = np.array([
+        [-w / 2, -h / 2],  # 左上角
+        [w / 2, -h / 2],   # 右上角
+        [w / 2, h / 2],    # 右下角
+        [-w / 2, h / 2],   # 左下角
+    ])
+
+    # 旋转矩阵
+    rotation_matrix = np.array([
+        [cos_r, -sin_r],
+        [sin_r, cos_r]
+    ])
+    
+    # 旋转并平移到(x, y)
+    rotated_corners = np.dot(corners, rotation_matrix.T) + np.array([x, y])
+    
+    return rotated_corners

@@ -60,3 +60,64 @@ class SegmentationPredictor:
                 detect_results.masks.append(mask_resized)
     
         return detect_results
+
+
+class ObbPredictor:
+    def __init__(self, model: YOLO, device: str):
+        self.model = model
+        self.device = device
+
+    def predict(self, image: np.ndarray, conf: float=0.25, iou: float=0.1) -> YoloDetectResults:
+        """
+        Args:
+            image (np.ndarray): 输入图像
+            conf (float, optional): 置信度. Defaults to 0.25.
+            iou (float, optional): iou. Defaults to 0.1.
+        
+        Returns:
+            YoloDetectResults: 检测结果
+        """
+        detect_results = YoloDetectResults()
+
+        results = self.model(image, conf=conf, iou=iou, verbose=False, device=self.device)
+        detect_results.xyxyxyxy = results[0].obb.xyxyxyxy.int().tolist()
+        detect_results.clss = results[0].obb.cls.int().tolist()
+        detect_results.confs = results[0].obb.conf.tolist()
+
+        return detect_results
+    
+class PosePredictor:
+    def __init__(self, model: YOLO, device: str):
+        self.model = model
+        self.device = device
+
+    def predict(self, image: np.ndarray, conf: float=0.25, iou: float=0.1) -> YoloDetectResults:
+        """
+        Args:
+            image (np.ndarray): 输入图像
+            conf (float, optional): 置信度. Defaults to 0.25.
+            iou (float, optional): iou. Defaults to 0.1.
+        
+        Returns:
+            YoloDetectResults: 检测结果
+        """
+        detect_results = YoloDetectResults()
+
+        results = self.model(image, conf=conf, iou=iou, verbose=False, device=self.device)
+        detect_results.boxes = results[0].boxes.xyxy.int().tolist()
+        detect_results.clss = results[0].boxes.cls.int().tolist()
+        detect_results.confs = results[0].boxes.conf.tolist()
+        keypoints = results[0].keypoints.xy.tolist()
+        keypoints_conf = results[0].keypoints.conf.tolist()
+        for i, keypoint in enumerate(keypoints):
+            orig_keypoints = []
+            keypoint_conf = keypoints_conf[i]
+            for j, point in enumerate(keypoint):
+                if keypoint_conf[j] > 0.5:
+                    orig_keypoints.append([int(point[0]), int(point[1]), float(keypoint_conf[j])])
+                else:
+                    orig_keypoints.append([0.0, 0.0, 0.0])
+            detect_results.keypoints.append(orig_keypoints)
+
+        return detect_results
+    

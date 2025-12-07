@@ -5,20 +5,23 @@ import numpy as np
 
 from algo.yolov8.enums import ModelTask
 from algo.yolov8.results import YoloDetectResults
-from algo.yolov8.tensorrt.utils import preprocess, postprocess_det, postprocess_seg
+from algo.yolov8.tensorrt.utils import preprocess
+from algo.yolov8.tensorrt.postprocess import postprocess_det, postprocess_seg, postprocess_obb, postprocess_pose
 
 
 class Yolov8Trt:
     """YoloV8 TensorRT推理"""
-    def __init__(self, engine_path :str, task :ModelTask, max_batch_size :int=1):
+    def __init__(self, engine_path :str, task :ModelTask, keypoint_num :int=0, max_batch_size :int=1):
         """
         Args:
             engine_path (str): path
-            task (ModelTask): 模型任务. 目前支持'detect' 'segment'
+            task (ModelTask): 模型任务.
+            keypoint_num (int, optional): 当时用关键点模型时, 关键点数量. Defaults to 0.
             max_batch_size (int, optional): 最大批量大小. Defaults to 1. 目前只支持batch_size=1时
         """
         self.engine_path = engine_path
         self.task = task
+        self.keypoint_num = keypoint_num
         self.max_batch_size = max_batch_size
 
         if not isinstance(self.task, ModelTask):
@@ -28,8 +31,8 @@ class Yolov8Trt:
         postprocess_map = {
             ModelTask.DET: postprocess_det,
             ModelTask.SEG: postprocess_seg,
-            ModelTask.POSE: postprocess_det,
-            ModelTask.OBB: postprocess_det
+            ModelTask.POSE: postprocess_pose,
+            ModelTask.OBB: postprocess_obb
         }
         self.postprocess = postprocess_map[self.task]
         
@@ -71,7 +74,9 @@ class Yolov8Trt:
             conf_thres=conf,
             iou_thres=iou,
             ratio=ratio,
-            pad=pad
+            pad=pad,
+            input_shape=self.input_shape[2:],
+            keypoint_num=self.keypoint_num
         )
 
         return detections
@@ -203,23 +208,3 @@ class Yolov8Trt:
         """清理资源"""
         if hasattr(self, 'stream'):
             self.stream.synchronize()
-
-if __name__ == '__main__':
-    import cv2
-
-    yolo_trt = Yolov8Trt("/home/cc/FlexiVision/models/person_head_v8s_1007.engine", ModelTask.DET)
-
-    cap = cv2.VideoCapture("/home/cc/FlexiVision/887832848-1-208.mp4")
-    while True:
-        ret, image = cap.read()
-        if not ret:
-            break
-        
-        results = yolo_trt.detect(image)
-        for box in results.boxes:
-            cv2.rectangle(image, (box[0], box[1]), (box[2], box[3]), (0, 0, 255), 2)
-
-        img_show = cv2.resize(image, (720, 480))
-        cv2.imshow("result", img_show)
-        if cv2.waitKey(1) & 0xFF == ord('q'):
-            break

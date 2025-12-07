@@ -4,7 +4,7 @@ from ultralytics import YOLO
 
 from algo.yolov8.enums import ModelTask, TorchDevice
 from algo.yolov8.results import YoloDetectResults
-from algo.yolov8.torch.predict import DetectionPredictor, SegmentationPredictor
+from algo.yolov8.torch.predict import DetectionPredictor, SegmentationPredictor, ObbPredictor, PosePredictor
 
 
 class Yolov8Torch:
@@ -27,6 +27,10 @@ class Yolov8Torch:
             self.predictor = DetectionPredictor(self.model, device.value)
         elif self.task == ModelTask.SEG:
             self.predictor = SegmentationPredictor(self.model, device.value)
+        elif self.task == ModelTask.OBB:
+            self.predictor = ObbPredictor(self.model, device.value)
+        elif self.task == ModelTask.POSE:
+            self.predictor = PosePredictor(self.model, device.value)
 
         print('CUDA加载模型成功:', self.model.info())
 
