@@ -3,6 +3,7 @@ import pycuda.driver as cuda
 import pycuda.autoinit
 import numpy as np
 
+from typing import List
 from algo.yolov8.enums import ModelTask
 from algo.yolov8.results import YoloDetectResults
 from algo.yolov8.utils.utils import preprocess
@@ -144,13 +145,13 @@ class Yolov8Trt:
         
         return io_tensors
 
-    def _infer(self, input_data_list: list[np.ndarray]) -> list[np.ndarray]:
+    def _infer(self, input_data_list: List[np.ndarray]) -> List[np.ndarray]:
         """
         异步推理
         Args:
-            input_data_list (list[np.ndarray]): 输入数据列表
+            input_data_list (List[np.ndarray]): 输入数据列表
         Returns:
-            list[np.ndarray]: 推理结果列表
+            List[np.ndarray]: 推理结果列表
         """
         # 设置输入张量地址和形状
         for i, input_tensor_info in enumerate(self.io_tensors['inputs']):

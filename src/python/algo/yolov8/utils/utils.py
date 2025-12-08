@@ -193,7 +193,7 @@ def process_mask_output(mask_predictions, mask_output, boxes, orig_shape, input_
         ratio: 预处理缩放比例
         pad: 填充尺寸 (dw, dh)
     Returns:
-        list[np.ndarray]: 原图像尺寸mask列表
+        List[np.ndarray]: 原图像尺寸mask列表
     """
     if mask_predictions.shape[0] == 0:
         return []

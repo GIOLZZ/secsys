@@ -1,4 +1,5 @@
 import numpy as np
+from typing import List
 # from dataclasses import dataclass
 
 
@@ -6,9 +7,9 @@ import numpy as np
 class YoloDetectResults:
     """Yolo检测结果"""
     def __init__(self):
-        self.boxes: list[list[int]] = []
-        self.clss: list[int] = []
-        self.confs: list[float] = []
-        self.masks: list[np.ndarray] = []
-        self.keypoints: list[list[int, float]] = []
-        self.xyxyxyxy: list[list[int]] = []
+        self.boxes: List[List[int]] = []
+        self.clss: List[int] = []
+        self.confs: List[float] = []
+        self.masks: List[np.ndarray] = []
+        self.keypoints: List[List[int, float]] = []
+        self.xyxyxyxy: List[List[int]] = []
